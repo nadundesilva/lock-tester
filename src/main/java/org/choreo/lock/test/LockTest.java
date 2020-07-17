@@ -80,25 +80,33 @@ public class LockTest {
                     }
                 }
                 if (initialMaxNumber > 0) {
-                    print("Fetched initial max number: " + initialMaxNumber);
+                    print("Fetched initial max ID: " + initialMaxNumber);
                 } else {
-                    throw new RuntimeException("Failed to fetch initial max number");
+                    throw new RuntimeException("Failed to fetch initial max ID");
                 }
 
                 for (int i = 0; i < 20; i++) {
                     Thread.sleep(100);
-                    int numberToInsert = initialMaxNumber * 100 + i;
                     try (PreparedStatement stmt = conn.prepareStatement("INSERT INTO " + MYSQL_TABLE_NAME
-                            + " (NAME) VALUES ('" + threadName + "-" + numberToInsert + "')")) {
+                            + " (NAME) VALUES ('" + threadName + ":row-" + (i + 1) + "')")) {
                         int updatedRowCount = stmt.executeUpdate();
                         print("Iteration " + i + " - Inserted " + updatedRowCount + " row(s)");
                     }
                 }
 
-                try (PreparedStatement stmt = conn.prepareStatement("SELECT MAX(ID) FROM " + MYSQL_TABLE_NAME)) {
-                    try (ResultSet resultSet = stmt.executeQuery()) {
-                        while (resultSet.next()) {
-                            print("Fetched final max number: " + resultSet.getInt(1));
+                try (PreparedStatement getStmt = conn.prepareStatement("SELECT MAX(ID) FROM " + MYSQL_TABLE_NAME)) {
+                    try (ResultSet getStmtResultSet = getStmt.executeQuery()) {
+                        while (getStmtResultSet.next()) {
+                            int finalMaxNumber = getStmtResultSet.getInt(1);
+                            print("Fetched final max ID: " + finalMaxNumber);
+                            try (PreparedStatement stmt = conn.prepareStatement("SELECT NAME FROM " + MYSQL_TABLE_NAME
+                                    + " WHERE ID="+ finalMaxNumber)) {
+                                try (ResultSet resultSet = stmt.executeQuery()) {
+                                    while (resultSet.next()) {
+                                        print("Fetched final max ID name: " + resultSet.getString(1));
+                                    }
+                                }
+                            }
                         }
                     }
                 }
